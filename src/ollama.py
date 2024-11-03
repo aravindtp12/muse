@@ -16,7 +16,7 @@ def create_llm(model_name="llama2"):
 
 def create_chain(prompt_template):
     """Create a LangChain chain with the given prompt template."""
-    llm = create_llm()
+    llm = create_llm(model_name="llama3")
     prompt = PromptTemplate.from_template(prompt_template)
     chain = LLMChain(llm=llm, prompt=prompt)
     return chain
