@@ -1,2 +1,6 @@
+tqdm
+pypdf
+chromadb
 langchain
 langchain-community
+langchain-ollama
