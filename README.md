@@ -1,4 +1,4 @@
-# AI Memory assitant
+# AI Memory assistant
 
 A simple Python application that provides an interactive chat interface with local LLM models using Ollama and LangChain.
 
