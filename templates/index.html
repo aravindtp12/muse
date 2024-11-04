@@ -49,6 +49,7 @@
                 <input type="file" id="pdf-file" accept=".pdf" required>
                 <button type="submit">Upload</button>
             </form>
+            <div id="processing-status"></div>
 
             <div id="qa-section">
                 <h2>Ask a Question</h2>
@@ -68,6 +69,14 @@
             e.preventDefault();
             const formData = new FormData();
             const fileInput = document.getElementById('pdf-file');
+            const statusDiv = document.getElementById('processing-status');
+            
+            // Immediately display PDF
+            document.getElementById('pdf-viewer').src = URL.createObjectURL(fileInput.files[0]);
+            
+            // Show processing message
+            statusDiv.innerHTML = '<p style="color: orange;">PDF is being processed...</p>';
+            
             formData.append('file', fileInput.files[0]);
             
             try {
@@ -76,16 +85,35 @@
                     body: formData
                 });
                 const data = await response.json();
-                if (response.ok) {
-                    // Display PDF in viewer
-                    document.getElementById('pdf-viewer').src = URL.createObjectURL(fileInput.files[0]);
-                } else {
+                if (!response.ok) {
                     alert(data.error);
+                    statusDiv.innerHTML = '';
                 }
+                
+                // Start polling for processing status
+                checkProcessingStatus();
             } catch (error) {
                 alert('Error uploading file');
+                statusDiv.innerHTML = '';
             }
         };
+
+        async function checkProcessingStatus() {
+            const statusDiv = document.getElementById('processing-status');
+            
+            try {
+                const response = await fetch('/processing-status');
+                const data = await response.json();
+                
+                if (data.processing) {
+                    setTimeout(checkProcessingStatus, 1000); // Check again in 1 second
+                } else {
+                    statusDiv.innerHTML = '<p style="color: green;">Processing complete!</p>';
+                }
+            } catch (error) {
+                console.error('Error checking processing status:', error);
+            }
+        }
 
         async function askQuestion() {
             const question = document.getElementById('question').value;
