@@ -5,13 +5,12 @@ A simple Python application that provides an interactive chat interface with loc
 ## Prerequisites
 
 - [Ollama](https://ollama.ai/) installed on your system
-- Python 3.8 or higher
+- Python 3.11 or higher
 - pip (Python package manager)
 
 ## Installation
 
 1. Clone this repository or download the files to your local machine.
 2. Create a virtual environemnt for this project. (Requires python 3.11 or higher)
-
-source venv/bin/activate
-pip install -r requirements.txt
+3. source venv/bin/activate
+4. pip install -r requirements.txt
