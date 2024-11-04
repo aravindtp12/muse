@@ -22,25 +22,63 @@ def create_llm(model_name="llama3"):
 
 def create_vectorstore(pdf_path):
     """Create a vector store from a PDF document."""
-    # Load PDF
+    print("Loading PDF...")
     loader = PyPDFLoader(pdf_path)
     documents = loader.load()
     
-    # Split text into chunks
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200
-    )
-    splits = text_splitter.split_documents(documents)
-    print("Splitting documents into chunks and creating embeddings")
-    # Create embeddings and vector store
+    print(f"Loaded {len(documents)} pages from PDF")
+    
+    # Process pages in order and add page numbers to help track order
+    texts_with_metadata = []
+    for page_num, doc in enumerate(documents):
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=2048,
+            chunk_overlap=200,
+            length_function=len,
+            is_separator_regex=False
+        )
+        chunks = text_splitter.split_text(doc.page_content)
+        print(f"Page {page_num + 1}: Created {len(chunks)} chunks")
+        
+        # Verify content (print first 100 chars of first chunk)
+        if chunks:
+            print(f"Sample from page {page_num + 1}: {chunks[0][:100]}...")
+        
+        # Add page number and chunk index as metadata
+        for chunk_idx, chunk in enumerate(chunks):
+            if len(chunk.strip()) > 0:  # Only add non-empty chunks
+                texts_with_metadata.append({
+                    "text": chunk,
+                    "metadata": {
+                        "page": page_num + 1,
+                        "chunk": chunk_idx + 1,
+                        "source": pdf_path
+                    }
+                })
+    
+    print(f"\nTotal chunks created: {len(texts_with_metadata)}")
+    
+    if not texts_with_metadata:
+        raise ValueError("No text chunks were created! Check if the PDF is readable.")
+    
+    print("\nCreating embeddings and vector store...")
     embeddings = OllamaEmbeddings(model="llama3")
-    vectorstore = Chroma.from_documents(
-        documents=tqdm(splits, desc="Creating embeddings"),
+    
+    # Create vector store with metadata
+    texts = [t["text"] for t in texts_with_metadata]
+    metadatas = [t["metadata"] for t in texts_with_metadata]
+    
+    # Verify we're sending non-empty data to Chroma
+    print(f"Number of texts being sent to vector store: {len(texts)}")
+    print(f"First text sample: {texts[0][:100]}...")
+    print(f"Last text sample: {texts[-1][:100]}...")
+    
+    vectorstore = Chroma.from_texts(
+        texts=tqdm(texts),
+        metadatas=metadatas,
         embedding=embeddings,
         persist_directory="./data/chroma_db"
     )
-    print("Vector store created")
     
     return vectorstore
 
