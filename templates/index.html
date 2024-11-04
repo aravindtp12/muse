@@ -131,12 +131,19 @@
                 
                 if (response.ok) {
                     const answerContainer = document.getElementById('answer-container');
-                    answerContainer.innerHTML = `
-                        <div class="answer">
-                            <p><strong>Q:</strong> ${question}</p>
-                            <p><strong>A:</strong> ${data.answer}</p>
-                        </div>
+                    // Create new div for this Q&A pair
+                    const qaDiv = document.createElement('div');
+                    qaDiv.className = 'answer';
+                    qaDiv.innerHTML = `
+                        <p><strong>Q:</strong> ${question}</p>
+                        <p><strong>A:</strong> ${data.answer}</p>
                     `;
+                    // Append new Q&A (newest at bottom)
+                    answerContainer.appendChild(qaDiv);
+                    // Clear the question input
+                    document.getElementById('question').value = '';
+                    // Scroll to the bottom to show the latest message
+                    answerContainer.scrollTop = answerContainer.scrollHeight;
                 } else {
                     alert(data.error);
                 }

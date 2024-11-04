@@ -1,14 +1,16 @@
 from flask import Flask, render_template, request, jsonify
 import os
-from langchain.prompts import PromptTemplate
-from src.pdf_qa import create_vectorstore, create_qa_chain, create_llm
+from langchain_core.prompts import ChatPromptTemplate
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_retrieval_chain
+from src.pdf_qa import create_vectorstore, create_llm
 from threading import Thread
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-qa_chain = None
+retrieval_chain = None
 processing_pdf = False
 
 @app.route('/')
@@ -17,7 +19,7 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    global qa_chain, processing_pdf
+    global retrieval_chain, processing_pdf
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
     
@@ -31,26 +33,23 @@ def upload_file():
         
         # Start processing in background thread
         def process_pdf():
-            global qa_chain, processing_pdf
+            global retrieval_chain, processing_pdf
             processing_pdf = True
             vectorstore = create_vectorstore(filepath)
             llm = create_llm(model_name="llama3")
-            template = """
-            ### System:
-            You are a reading assistant. You have to answer the user's \
-            questions using only the context provided to you. If you don't know the answer, \
-            just say you don't know. Don't try to make up an answer.
-
-            ### Context:
-            {context}
-
-            ### User:
-            {question}
-
-            ### Response:
-            """
-            prompt = PromptTemplate.from_template(template)
-            qa_chain = create_qa_chain(vectorstore, llm, prompt)
+            system_prompt = (
+            "Use the given context to answer the question. "
+            "If you don't know the answer, say you don't know. "
+            "Context: {context}"
+            )
+            prompt = ChatPromptTemplate.from_messages(
+                [
+                    ("system", system_prompt),
+                    ("human", "{input}"),
+                ]
+            )
+            qa_chain = create_stuff_documents_chain(llm, prompt)
+            retrieval_chain = create_retrieval_chain(vectorstore.as_retriever(), qa_chain)
             processing_pdf = False
         
         Thread(target=process_pdf).start()
@@ -60,10 +59,10 @@ def upload_file():
 
 @app.route('/ask', methods=['POST'])
 def ask_question():
-    global qa_chain, processing_pdf
+    global retrieval_chain, processing_pdf
     if processing_pdf:
         return jsonify({'error': 'PDF is still being processed'}), 400
-    if qa_chain is None:
+    if retrieval_chain is None:
         return jsonify({'error': 'Please upload a PDF first'}), 400
     
     data = request.json
@@ -71,7 +70,7 @@ def ask_question():
     if not question:
         return jsonify({'error': 'No question provided'}), 400
     
-    response = qa_chain({"query": question})
+    response = retrieval_chain.invoke({"input": question})
     return jsonify({
         'answer': response['result'],
         'sources': [doc.metadata for doc in response['source_documents']]
