@@ -1,6 +1,7 @@
 # Virtual Environment
 venv/
 data/
+uploads/
 env/
 .env/
 

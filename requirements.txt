@@ -1,6 +1,7 @@
 tqdm
 pypdf
 chromadb
+flask
 langchain
 langchain-community
 langchain-ollama
