@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import os
-from src.pdf_qa import create_vectorstore, create_qa_chain
+from langchain.prompts import PromptTemplate
+from src.pdf_qa import create_vectorstore, create_qa_chain, create_llm
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
@@ -26,9 +27,27 @@ def upload_file():
         filepath = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(filepath)
         
-        # Create vector store and QA chain
         vectorstore = create_vectorstore(filepath)
-        qa_chain = create_qa_chain(vectorstore)
+        llm = create_llm(model_name="llama3")
+        template = """
+        ### System:
+        You are a reading assistant. You have to answer the user's \
+        questions using only the context provided to you. If you don't know the answer, \
+        just say you don't know. Don't try to make up an answer.
+
+        ### Context:
+        {context}
+
+        ### User:
+        {question}
+
+        ### Response:
+        """
+
+        prompt = PromptTemplate.from_template(template)
+        
+        # Create the QA chain
+        qa_chain = create_qa_chain(vectorstore, llm, prompt)
         
         return jsonify({'message': 'PDF processed successfully'})
     
