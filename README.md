@@ -1,6 +1,6 @@
 # AI Reading assistant
 
-A simple Python application that provides an interactive chat interface with local LLM models using Ollama and LangChain.
+A simple Flask application that provides an interactive chat interface with local LLM models using Ollama and LangChain.
 
 ## Prerequisites
 
